@@ -9,6 +9,10 @@ from langchain_core.prompts import PromptTemplate
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain.chains import create_retrieval_chain
+from database import create_connection, check_user, initialize_database
+
+# Inicializar o banco de dados
+initialize_database()
 
 # Load environment variables
 load_dotenv()
@@ -38,22 +42,10 @@ def read_all_documents_in_directory(directory):
 
 @st.cache_resource
 def load_documents():
-    # Load all documents in the directory
     documents = read_all_documents_in_directory("./documents")
-
-    # pdf_loader = PyPDFLoader("./docs_test/renova_devops_cronograma_atual.pdf")
-    # csv_loader = CSVLoader(
-    #     file_path="./docs_test/placas_video_grande_processadas.csv")
-    # text_loader = TextLoader("./docs_test/links-gits-azure-devops.txt")
-
-    # documents = []
-    # for loader in [pdf_loader, csv_loader, text_loader]:
-    #     documents.extend(loader.load())
-
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=500, chunk_overlap=50)
     chunks = text_splitter.split_documents(documents)
-
     embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key)
     vectorstore = FAISS.from_documents(chunks, embeddings)
     return vectorstore.as_retriever()
@@ -66,9 +58,10 @@ llm = ChatOpenAI(model="gpt-4", openai_api_key=openai_api_key, temperature=0)
 
 # Define prompt template
 prompt_template = PromptTemplate(
-    input_variables=["context", "input"],  # Changed "query" to "input"
+    input_variables=["context", "input"],
     template="""
     Você é um assistente que responde perguntas com base nos documentos fornecidos.
+    Responda às perguntas como se fosse um baiano.
 
     Documentos: {context}
 
@@ -81,57 +74,72 @@ prompt_template = PromptTemplate(
 # Create the document chain
 document_chain = create_stuff_documents_chain(llm, prompt_template)
 
-# Debugging: Print the input schema of the document chain
-print("Document Chain Input Schema:", document_chain.input_schema.schema())
-
-# Debugging: Print the output schema of the document chain
-print("Document Chain Output Schema:", document_chain.output_schema.schema())
-
 # Create the retrieval chain
 qa_chain = create_retrieval_chain(retriever, document_chain)
 
-# Debugging: Print the input schema of the retrieval chain
-print("QA Chain Input Schema:", qa_chain.input_schema.schema())
+# Login functionality
 
-# Debugging: Print the output schema of the retrieval chain
-print("QA Chain Output Schema:", qa_chain.output_schema.schema())
 
-st.title("R-InsightDocs")
+def login_page():
+    st.title("Login")
+    username = st.text_input("Usuário")
+    password = st.text_input("Senha", type="password")
+    if st.button("Login"):
+        conn = create_connection()
+        if check_user(conn, username, password):
+            st.session_state.logged_in = True
+            st.rerun()
+        else:
+            st.error("Usuário ou senha incorretos")
+        conn.close()
 
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+# Chatbot page
 
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
 
-if user_input := st.chat_input("You:"):
-    st.session_state.messages.append({"role": "user", "content": user_input})
-    with st.chat_message("user"):
-        st.markdown(user_input)
+def chatbot_page():
+    st.title("R-InsightDocs")
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
 
-    # Debugging: Print the user input
-    print("User Input:", user_input)
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
 
-    # Invoke the retrieval chain
-    response = qa_chain.invoke({"input": user_input})
+    if user_input := st.chat_input("You:"):
+        st.session_state.messages.append(
+            {"role": "user", "content": user_input})
+        with st.chat_message("user"):
+            st.markdown(user_input)
 
-    # Debugging: Print the full response from the retrieval chain
-    print("Full Response from QA Chain:", response)
+        response = qa_chain.invoke({"input": user_input})
+        answer = response["answer"]
+        source_documents = response["context"]
 
-    # Extract the answer and source documents
-    answer = response["answer"]
-    source_documents = response["context"]
+        st.session_state.messages.append(
+            {"role": "assistant", "content": answer})
+        with st.chat_message("assistant"):
+            st.markdown(answer)
 
-    # Debugging: Print the answer and source documents
-    print("Answer:", answer)
-    print("Source Documents:", source_documents)
+        with st.expander("Documentos de origem"):
+            for doc in source_documents:
+                st.markdown(doc.page_content)
 
-    st.session_state.messages.append({"role": "assistant", "content": answer})
-    with st.chat_message("assistant"):
-        st.markdown(answer)
+    if st.button("Logout"):
+        st.session_state.logged_in = False
+        st.rerun()
 
-    # Display the source documents (optional)
-    with st.expander("Documentos de origem"):
-        for doc in source_documents:
-            st.markdown(doc.page_content)
+# Main function
+
+
+def main():
+    if "logged_in" not in st.session_state:
+        st.session_state.logged_in = False
+
+    if st.session_state.logged_in:
+        chatbot_page()
+    else:
+        login_page()
+
+
+if __name__ == "__main__":
+    main()
