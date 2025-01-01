@@ -54,14 +54,14 @@ def load_documents():
 retriever = load_documents()
 
 # Initialize ChatGPT model
-llm = ChatOpenAI(model="gpt-4", openai_api_key=openai_api_key, temperature=0)
+llm = ChatOpenAI(model="chatgpt-4o-latest",
+                 openai_api_key=openai_api_key, temperature=0)
 
 # Define prompt template
 prompt_template = PromptTemplate(
     input_variables=["context", "input"],
     template="""
     Você é um assistente que responde perguntas com base nos documentos fornecidos.
-    Responda às perguntas como se fosse um baiano.
 
     Documentos: {context}
 
