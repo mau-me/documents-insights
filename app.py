@@ -1,3 +1,4 @@
+from datetime import datetime
 import streamlit as st
 from dotenv import load_dotenv
 import os
@@ -17,6 +18,10 @@ initialize_database()
 # Load environment variables
 load_dotenv()
 openai_api_key = os.getenv("OPENAI_API_KEY")
+
+# Mensagem de inicialização e data/hora
+print("Consumindo a aplicação...")
+print("Data e hora atual:", datetime.now())
 
 # Read All Documents in the Directory
 
