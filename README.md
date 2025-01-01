@@ -8,6 +8,7 @@
   - [Pré-requisitos](#pré-requisitos)
   - [Instalação](#instalação)
   - [Uso](#uso)
+  - [Futuras Implementações](#futuras-implementações)
   - [Contato](#contato)
 
 ## Sobre
@@ -49,6 +50,16 @@ Execute o script `oracle.py`, com o streamlit, para iniciar o chatbot.
 ```bash
 streamlit run oracle.py
 ```
+
+## Futuras Implementações
+
+- [ ] Implementar a extração de informações de documentos de novos vários formatos
+- [ ] Implementar o vector database para armazenar as informações extraídas, removendo a necessidade de reprocessar os documentos a cada nova consulta
+- [ ] Implementar a extração de informações de documentos de áudio e vídeo
+- [ ] (**_Verificar se já não funciona_**) Implementar a extração de informações de documentos de imagens
+- [ ] Implementar a extração de informações de documentos de redes sociais
+- [ ] Implementar a disponibilização do chatbot em uma API REST
+- [ ] Implementar a disponibilização automática de insights em um dashboard
 
 ## Contato
 
